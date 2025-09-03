@@ -1,49 +1,60 @@
-# Tiler v2 — FIFO-Based, Faster, Smarter Window Tiling
+# Tiler v3.1 — Pure Python, No External Tools, Faster Than Ever
 
-> A complete rewrite of the original xdotool-based Tiler, now using a persistent daemon and smarter tiling logic.
+> A complete rewrite of the tiling daemon in pure Python using python-xlib.  
+> No xdotool or wmctrl — direct X11 calls provide instant, flicker-free tiling.
 
-## What's New?
+## What's New in v3
 
-- **Persistent background process** — A lightweight daemon listens on `~/.tiler.sock` for commands
-- **Faster performance** — Uses a more efficient Python implementation
-- **Improved layout logic** — Smarter handling of window quarters and toggling between half/full dimensions
-- **No need to pass border/titlebar dimensions manually** — Tiler now calculates frame overhead using `xwininfo`
-- **Python 3 rewrite** — Cleaner, easier to maintain, and more hackable
-- **New center behavior** — Places a 3/4 screen-sized window centered on the screen
+- **Zero external CLI dependencies** — No xdotool, no wmctrl, just python-xlib
+- **Direct X11 calls** — Faster, smoother window moves and resizes
+- **Same FIFO control interface** — Drop-in replacement for v2 scripts
+- **Still lightweight** — Single Python process, minimal CPU usage
+
+### What's Changed in v3.1
+
+- **Improved logic** — In line 106, changed `geom["height"] <= half_height` to `geom["height"] >= half_height`
+
+---
+
+## Available Actions
+
+- **center** — 3/4 of screen, centered  
+- **fullscreen** — Usable screen area  
+- **left** — Left half  
+- **right** — Right half  
+- **up** — Top half or quarter  
+- **down** — Bottom half or quarter  
+
+---
 
 ## Installation
 
-### Make Files executable:
+### 1. Install Dependencies
+
+```bash
+sudo apt install python3-xlib
+````
+
+### 2. Make Files executable:
+
 ```bash
 chmod +x ~/bin/tilerd
 ```
-
 ```bash
 chmod +x ~/bin/tiler.sh
 ```
 
 > **Tip:** Ensure `~/bin/tiler.sh` is in your PATH or bound to shortcuts.
 
-### 3. Dependencies
-
-Install required tools:
-
-```bash
-sudo apt install python3 xdotool wmctrl x11-utils
-```
-
 ---
 
 ## Usage
 
-### Available Actions
+Start the daemon:
 
-* **center** — 3/4 of screen, centered
-* **fullscreen** — Usable screen area
-* **left** — Left half
-* **right** — Right half
-* **up** — Top half or quarter
-* **down** — Bottom half or quarter
+```bash
+tilerd
+```
 
 Send commands to the daemon:
 
