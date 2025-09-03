@@ -1,127 +1,127 @@
 #!/usr/bin/env python3
 
 import os
+import re
 import select
-from Xlib import display, X
+import subprocess
 
-class Tiler:
-    def __init__(self):
-        self.FIFO_PATH = os.path.expanduser("~/.tiler.sock")
-        if os.path.exists(self.FIFO_PATH):
-            os.remove(self.FIFO_PATH)
-        os.mkfifo(self.FIFO_PATH)
-        
-        self.dpy = display.Display()
-        
-    def start(self):
-        try:
-            self.root = self.dpy.screen().root
-            geom = self.root.get_geometry()
-            
-            self.screen_width, self.screen_height = geom.width, geom.height
-            self.half_screen_width = self.screen_width // 2
-            self.half_screen_height = self.screen_height // 2
-            
-            print(f"[tilerd] Listening on {self.FIFO_PATH}...")
-            while True:
-                with open(self.FIFO_PATH, "r") as fifo:
-                    ready, _, _ = select.select([fifo], [], [], 1)
-                    if ready:
-                        line = fifo.readline().strip()
-                        if line:
-                            self.handle_action(line)
-        except Exception as e:
-            print(f"[tilerd] Error: {e}")
-        except KeyboardInterrupt:
-            print("[tilerd] Shutting down...")
-        finally:
-            self.dpy.close()
-        
-    def handle_action(self, action):
-        if action not in {'center', 'fullscreen', 'left', 'right', 'up', 'down'}:
-            return
-        
-        active_id = self.get_active_window_id()
-        geom = self.get_geometry(active_id)
-        self.move_resize(geom["object"], *self.generate_dimensions(geom, action))
+FIFO_PATH = os.path.expanduser("~/.tiler.sock")
 
-    def get_active_window_id(self):
-        net_active_window = self.dpy.intern_atom('_NET_ACTIVE_WINDOW')
-        window_id = self.root.get_full_property(net_active_window, 0).value[0]
-        return window_id
+def move_resize(window_id, x, y, width, height):
+    subprocess.run(['xdotool', 'windowmove', window_id, str(x), str(y)])
+    subprocess.run(['xdotool', 'windowsize', window_id, str(width), str(height)])
 
-    def move_resize(self, window, x, y, width, height):
-        window.configure(x=x, y=y, width=width, height=height)
-        self.dpy.sync()
-        
-    def get_geometry(self, active_id):
-        chain = []
-        current = self.dpy.create_resource_object('window', active_id)
-        active_object = current
-        while True:
-            info = {
-                'id': current.id,
-                'name': (current.get_wm_name() or b''),
-                'geometry': current.get_geometry()
-            }
-            parent = current.query_tree().parent
-            if not parent:
+def get_geometry():
+    active_id = subprocess.run(['xdotool', 'getactivewindow'], capture_output=True, text=True).stdout.strip()
+    active_hex = f"0x{int(active_id):x}"
+
+    wininfo = subprocess.check_output(["xwininfo", "-root", "-tree"]).decode().splitlines()
+
+    geom_pattern = re.compile(r'(\d+)x(\d+)\+(\d+)\+(\d+)')
+    top_level_pattern = re.compile(r'^ {5}(?! )')
+
+    current_block = []
+    for line in wininfo:
+        line = line.rstrip()
+        if top_level_pattern.match(line):
+            if current_block and any(active_hex in l for l in current_block):
+                for subline in current_block:
+                    if active_hex in subline:
+                        geom_match = geom_pattern.search(subline)
+                        if geom_match:
+                            width, height, x, y = (int(n) for n in geom_match.groups())
+                            break
                 break
-            chain.append(info)
-            current = self.dpy.create_resource_object('window', parent.id)
-            
-        return {
-            "object": active_object,
-            "width": chain[0]['geometry'].width,
-            "height": chain[0]['geometry'].height,
-            "ancestor_x": chain[-1]['geometry'].x,
-            "ancestor_y": chain[-1]['geometry'].y,
-            "ancestor_width": chain[-1]['geometry'].width,
-            "ancestor_height": chain[-1]['geometry'].height,
-        }
+            current_block = [line]
+            geom_match = geom_pattern.search(line)
+            if geom_match:
+                ancestor_width, ancestor_height, ancestor_x, ancestor_y = (int(n) for n in geom_match.groups())
+        else:
+            current_block.append(line)
 
-    def generate_dimensions(self, geom, action):
-        overhead_x = geom["ancestor_width"] - geom["width"]
-        overhead_y = geom["ancestor_height"] - geom["height"]
-        
-        full_width = self.screen_width - overhead_x
-        full_height = self.screen_height - overhead_y
-        half_width = self.half_screen_width - overhead_x
-        half_height = self.half_screen_height - overhead_y
+    return {
+        "active_hex": active_hex,
+        "width": width, "height": height,
+        "ancestor_x": ancestor_x, "ancestor_y": ancestor_y,
+        "ancestor_width": ancestor_width, "ancestor_height": ancestor_height,
+    }
 
-        x_new = y_new = w_new = h_new = 0
+def get_screen_dims():
+    dimensions = subprocess.run(['xdpyinfo'], capture_output=True, text=True).stdout
+    match = re.search(r'dimensions:\s+(\d+)x(\d+)', dimensions)
+    if match:
+        screen_width, screen_height = int(match[1]), int(match[2])
+        return screen_width, screen_height
+    raise RuntimeError("Could not parse screen dimensions")
 
-        if action == 'center':
-            w_new, h_new = int(0.75 * self.screen_width), int(0.75 * self.screen_height)
-            x_new = (self.screen_width - w_new - overhead_x) // 2
-            y_new = (self.screen_height - h_new -overhead_y) // 2
+def handle_action(action, screen_width, screen_height, half_screen_width, half_screen_height):
+    if action not in {'center', 'fullscreen', 'left', 'right', 'up', 'down'}:
+        return
 
-        elif action == 'fullscreen':
-            x_new, y_new = 0, 0
-            w_new, h_new = full_width, full_height
+    geom = get_geometry()
 
-        elif action in {'left', 'right'}:
-            x_new = 0 if action == 'left' else self.half_screen_width
-            w_new = half_width
-            if geom["width"] <= half_width and geom["ancestor_x"] == x_new and geom["height"] >= half_height or geom["height"] == full_height:
-                y_new = 0
-                h_new = full_height
-            else:
-                y_new = 0 if geom["ancestor_y"] < self.half_screen_height else self.half_screen_height
-                h_new = half_height
+    overhead_x = geom["ancestor_width"] - geom["width"]
+    overhead_y = geom["ancestor_height"] - geom["height"]
 
-        elif action in {'up', 'down'}:
-            y_new = 0 if action == 'up' else self.half_screen_height
+    full_width = screen_width - overhead_x
+    full_height = screen_height - overhead_y
+    half_width = half_screen_width - overhead_x
+    half_height = half_screen_height - overhead_y
+
+    x_new = y_new = w_new = h_new = 0
+
+    if (geom["ancestor_width"] == screen_width and geom["ancestor_height"] == screen_height and action != 'fullscreen'):
+        subprocess.run(['wmctrl', '-r', ':ACTIVE:', '-b', 'remove,maximized_vert,maximized_horz'])
+
+    if action == 'center':
+        w_new, h_new = int(0.75 * screen_width), int(0.75 * screen_height)
+        x_new = (screen_width - w_new - overhead_x) // 2
+        y_new = (screen_height - h_new -overhead_y) // 2
+
+    elif action == 'fullscreen':
+        x_new, y_new = 0, 0
+        w_new, h_new = full_width, full_height
+
+    elif action in {'left', 'right'}:
+        x_new = 0 if action == 'left' else half_screen_width
+        w_new = half_width
+        if geom["width"] <= half_width and geom["ancestor_x"] == x_new and geom["height"] <= half_height or geom["height"] == full_height:
+            y_new = 0
+            h_new = full_height
+        else:
+            y_new = 0 if geom["ancestor_y"] < half_screen_height else half_screen_height
             h_new = half_height
-            if geom["height"] <= half_height and geom["ancestor_y"] == y_new and geom["width"] >= half_width or geom["width"] == full_width:
-                x_new = 0
-                w_new = full_width
-            else:
-                x_new = 0 if geom["ancestor_x"] < self.half_screen_width else self.half_screen_width
-                w_new = half_width
 
-        return x_new, y_new, w_new, h_new
+    elif action in {'up', 'down'}:
+        y_new = 0 if action == 'up' else half_screen_height
+        h_new = half_height
+        if geom["height"] <= half_height and geom["ancestor_y"] == y_new and geom["width"] >= half_width or geom["width"] == full_width:
+            x_new = 0
+            w_new = full_width
+        else:
+            x_new = 0 if geom["ancestor_x"] < half_screen_width else half_screen_width
+            w_new = half_width
 
-if __name__=="__main__":
-    tiler = Tiler()
-    tiler.start()
+    move_resize(geom["active_hex"], x_new, y_new, w_new, h_new)
+
+def main():
+    if os.path.exists(FIFO_PATH):
+        os.remove(FIFO_PATH)
+    os.mkfifo(FIFO_PATH)
+    
+    screen_width, screen_height = get_screen_dims()
+    half_screen_width = screen_width // 2
+    half_screen_height = screen_height // 2
+    
+    print(f"[tilerd] Listening on {FIFO_PATH}...")
+
+    while True:
+        with open(FIFO_PATH, "r") as fifo:
+            ready, _, _ = select.select([fifo], [], [], 1)
+            if ready:
+                line = fifo.readline().strip()
+                if line:
+                    handle_action(line, screen_width, screen_height, half_screen_width, half_screen_height)
+
+if __name__ == "__main__":
+    main()
