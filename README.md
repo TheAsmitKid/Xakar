@@ -1,112 +1,129 @@
-# Tiler v3.1 — Pure Python, No External Tools, Faster Than Ever
+# Xakar v4 — Native C++ X11 Tiling Daemon
 
-> A complete rewrite of the tiling daemon in pure Python using python-xlib.  
-> No xdotool or wmctrl — direct X11 calls provide instant, flicker-free tiling.
-
-## What's New in v3
-
-- **Zero external CLI dependencies** — No xdotool, no wmctrl, just python-xlib
-- **Direct X11 calls** — Faster, smoother window moves and resizes
-- **Same FIFO control interface** — Drop-in replacement for v2 scripts
-- **Still lightweight** — Single Python process, minimal CPU usage
-
-### What's Changed in v3.1
-
-- **Improved logic** — In line 106, changed `geom["height"] <= half_height` to `geom["height"] >= half_height`
+> Fourth-generation tiling daemon — rewritten in optimized C++17 with direct Xlib/Xinerama calls.  
+> No Python, no external tools, no flicker. Fast, minimal, multi-monitor aware.
 
 ---
 
-## Available Actions
+## ✨ What’s New in v4
 
-- **center** — 3/4 of screen, centered  
-- **fullscreen** — Usable screen area  
-- **left** — Left half  
-- **right** — Right half  
-- **up** — Top half or quarter  
-- **down** — Bottom half or quarter  
+- **Pure C++17 implementation** — replaces the Python daemon from v3.x
+- **Direct Xlib/Xinerama** — zero dependencies beyond `libX11` and `libXinerama`
+- **Multi-monitor smart tiling**:
+  - Detects the monitor of the active window
+  - Moves windows across monitors with preserved geometry or preserved size
+  - Neighbor monitor detection (left/right/up/down aware)
+- **New commands**:
+  - `preserve_geom <dir>` → Move to another monitor, keep window position & size if possible
+  - `preserve_size <dir>` → Move to another monitor, preserve size, reapply tiling mode
+  - `wm_fullscreen` → Toggle WM-managed fullscreen (uses `_NET_WM_STATE_FULLSCREEN`)
+- **KHotKeys integration** — automatic shortcut setup with `config.py`
+- **Autostart support** — installs `.desktop` files into TDE’s autostart folder
 
 ---
 
-## Installation
+## 🔧 Installation
 
-### 1. Install Dependencies
+### 1. Install build dependencies
 
 ```bash
-sudo apt install python3-xlib
+sudo apt update
+sudo apt install -y build-essential libx11-dev libxinerama-dev
 ````
 
-### 2. Make Files executable:
+### 2. Clone and build
 
 ```bash
-chmod +x ~/bin/tilerd
-```
-```bash
-chmod +x ~/bin/tiler.sh
+git clone https://codeberg.org/Setuzuna/Xakar.git
+cd Xakar
+make
 ```
 
-> **Tip:** Ensure `~/bin/tiler.sh` is in your PATH or bound to shortcuts.
+### 3. Install
+
+```bash
+make install
+```
+
+This will:
+
+* Install the binary `xakard` into `/usr/local/bin`
+* Generate KHotKeys bindings (`~/.trinity/share/apps/khotkeys/setuzuna_xakar.khotkeys`)
+* Create autostart entries for:
+
+  * `xakard` (the tiling daemon)
+  * `xcape` (optional Win key rebind)
+
+### 4. Uninstall
+
+```bash
+make uninstall
+```
+
+This will remove:
+
+* `/usr/local/bin/xakard`
+* Autostart `.desktop` entries
+* Custom KHotKeys config (`setuzuna_xakar`)
 
 ---
 
-## Usage
+## 🚀 Usage
 
-Start the daemon:
+Run manually:
 
 ```bash
-tilerd
+xakard
 ```
 
-Send commands to the daemon:
+It listens on:
+
+```
+$HOME/.xakar.sock
+```
+
+Send actions to it with:
 
 ```bash
-tiler.sh left
-tiler.sh fullscreen
-tiler.sh center
+echo left > ~/.xakar.sock
+echo fullscreen > ~/.xakar.sock
+echo preserve_geom right > ~/.xakar.sock
 ```
 
 ---
 
-## Autostart with Trinity (TDE)
+## 🎹 Default Keybindings (via KHotKeys)
 
-1. Install Autostart Manager:
+Installed automatically by `config.py`.
 
-```bash
-sudo apt-get install kcontrol-autostart-trinity -y
-```
-
-2. Open **Control Panel → TDE Components → Autostart Manager**
-3. Click **Add**, check **Run in terminal**, enter:
-
-```bash
-~/bin/tilerd
-```
-
-4. Press **Enter**, name it `tiler-daemon`, then confirm.
+| Keys                   | Action                                   |
+| ---------------------- | ---------------------------------------- |
+| **Win+Up**             | `up` (top half / quarter)                |
+| **Win+Down**           | `down` (bottom half / quarter)           |
+| **Win+Left**           | `left` (left half / quarter)             |
+| **Win+Right**          | `right` (right half / quarter)           |
+| **Win+Return**         | `center` (3/4 centered)                  |
+| **Win+Space**          | `fullscreen` (fill monitor)              |
+| **Win+Shift+Space**    | `wm_fullscreen` (toggle WM fullscreen)   |
+| **Win+Alt+\[Arrows]**  | `preserve_geom` move to neighbor monitor preserving geometry |
+| **Win+Ctrl+\[Arrows]** | `preserve_size` move to neighbor monitor perserving tile mode|
 
 ---
 
-## Bind Tiling to Win+Key
+## 🖥️ Example: Multi-monitor workflow
 
-Use TDE's Input Actions:
+* **Win+Left** → Snap active window to left half of current monitor
+* **Press again** → Push to the right half of neighbor monitor
+* **Win+Alt+Right** → Move window to right monitor, preserving geometry
+* **Win+Ctrl+Right** → Move window to right monitor, preserving size
 
-1. Open **Control Panel → Regional & Accessibility → Input Actions**
-2. Click **New Group**, name it `Tiling`
-3. Click **New Action**, name it e.g., `Tile Left`
-4. Set **Action Type**: Keyboard Shortcut → Command/URL (simple)
-5. On the **Keyboard Shortcut** tab, set your key (e.g., Win+Left)
-6. On **Command/URL Settings**, enter:
+---
+
+## 🛠 Development
+
+Rebuild cleanly:
 
 ```bash
-~/bin/tiler.sh left
+make clean && make
 ```
 
-7. Repeat for each direction:
-
-| Key        | Command                     |
-| ---------- | --------------------------- |
-| Win+Left   | `~/bin/tiler.sh left`       |
-| Win+Right  | `~/bin/tiler.sh right`      |
-| Win+Up     | `~/bin/tiler.sh up`         |
-| Win+Down   | `~/bin/tiler.sh down`       |
-| Win+Return | `~/bin/tiler.sh fullscreen` |
-| Win+Space  | `~/bin/tiler.sh center`     |
