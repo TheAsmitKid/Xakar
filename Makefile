@@ -37,7 +37,7 @@ install: $(TARGET)
 		echo "[xakar] Ensuring khotkeys directory exists"; \
 		mkdir -p $(KHOTKEYS_DIR); \
 		echo "[xakar] Running config.py to set up shortcuts and autostart"; \
-		python3 $(CONFIG); \
+		python3 $(CONFIG) --install; \
 		chmod +x $(AUTOSTART_XAKAR) || true; \
 		chmod +x $(AUTOSTART_XCAPE) || true; \
 		echo "[xakar] Updating Trinity khotkeys (setuzuna_xakar)"; \
@@ -53,12 +53,18 @@ uninstall:
 		echo "[xakar] Cleaning up khotkeysrc"; \
 		if [ -f $(KHOTKEYSRC) ]; then \
 			sed -i 's/,setuzuna_xakar//g; s/setuzuna_xakar,//g; s/setuzuna_xakar//g' $(KHOTKEYSRC); \
-			echo "[xakar] Removed setuzuna_xakar from $(KHOTKEYSRC)"; \
+			echo "[xakar] Removed setuzuna_xakar ID from $(KHOTKEYSRC)"; \
 		else \
 			echo "[xakar] $(KHOTKEYSRC) not found, skipping"; \
 		fi; \
-		echo "[xakar] MANUALLY DELETE 'Setuzuna Xakar Bindings' in khotkeys"; \
-		tdecmshell khotkeys; \
+		echo "[xakar] Running config.py to uninstall shortcuts and creating empty config"; \
+		python3 $(CONFIG) --uninstall; \
+		echo "[xakar] Updating Trinity khotkeys"; \
+		/opt/trinity/lib/tdeconf_update_bin/khotkeys_update --id setuzuna_empty || true; \
+		echo "[xakar] Removing empty khotkeys"; \
+		rm -f $(KHOTKEYS_DIR)/setuzuna_empty.khotkeys; \
+		echo "[xakar] Removed setuzuna_empty ID from $(KHOTKEYSRC)"; \
+		sed -i 's/,setuzuna_empty//g; s/setuzuna_empty,//g; s/setuzuna_empty//g' $(KHOTKEYSRC); \
 		echo "[xakar] Removing custom khotkeys file (if present)"; \
 		rm -f $(KHOTKEYS_DIR)/setuzuna_xakar.khotkeys; \
 	else \
