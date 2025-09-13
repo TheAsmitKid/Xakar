@@ -1,11 +1,11 @@
-# Xakar v4 — Native C++ X11 Tiling Daemon
+# Xakar v4.1 — Native C++ X11 Tiling Daemon
 
 > Fourth-generation tiling daemon — rewritten in optimized C++17 with direct Xlib/Xinerama calls.  
 > No Python, no external tools, no flicker. Fast, minimal, multi-monitor aware.
 
 ---
 
-## ✨ What’s New in v4
+## What's New in v4
 
 - **Pure C++17 implementation** — replaces the Python daemon from v3.x
 - **Direct Xlib/Xinerama** — zero dependencies beyond `libX11` and `libXinerama`
@@ -18,11 +18,14 @@
   - `preserve_size <dir>` → Move to another monitor, preserve size, reapply tiling mode
   - `wm_fullscreen` → Toggle WM-managed fullscreen (uses `_NET_WM_STATE_FULLSCREEN`)
 - **KHotKeys integration** — automatic shortcut setup with `config.py`
-- **Autostart support** — installs `.desktop` files into TDE’s autostart folder
+- **Autostart support** — installs `.desktop` files into TDE's autostart folder
+
+## What's New in v4.1
+- Now with completely automatic uninstaller
 
 ---
 
-## 🔧 Installation
+## Installation
 
 ### 1. Install build dependencies
 
@@ -68,7 +71,7 @@ This will remove:
 
 ---
 
-## 🚀 Usage
+## Usage
 
 Run manually:
 
@@ -92,7 +95,7 @@ echo preserve_geom right > ~/.xakar.sock
 
 ---
 
-## 🎹 Default Keybindings (via KHotKeys)
+## Default Keybindings (via KHotKeys)
 
 Installed automatically by `config.py`.
 
@@ -110,7 +113,7 @@ Installed automatically by `config.py`.
 
 ---
 
-## 🖥️ Example: Multi-monitor workflow
+## Example: Multi-monitor workflow
 
 * **Win+Left** → Snap active window to left half of current monitor
 * **Press again** → Push to the right half of neighbor monitor
@@ -119,7 +122,7 @@ Installed automatically by `config.py`.
 
 ---
 
-## 🛠 Development
+## Development
 
 Rebuild cleanly:
 
