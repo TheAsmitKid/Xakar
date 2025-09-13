@@ -1,8 +1,18 @@
+import argparse
+import configparser
 import os
+import re
+import shutil
+import sys
+from datetime import datetime
+from tempfile import NamedTemporaryFile
 
 CONFIG_PATH = os.path.expanduser("~/.trinity/share/apps/khotkeys/setuzuna_xakar.khotkeys")
+EMPTY_PATH = os.path.expanduser("~/.trinity/share/apps/khotkeys/setuzuna_empty.khotkeys")
 AUTOSTART_PATH = os.path.expanduser("~/.trinity/Autostart/xakar-daemon.desktop")
 XCAPE_PATH = os.path.expanduser("~/.trinity/Autostart/xcape-daemon.desktop")
+KHOTKEYS_PATH = os.path.expanduser("~/.trinity/share/config/khotkeysrc")
+TARGET_NAME = "Setuzuna Xakar Bindings"
 
 ACTIONS = [
     ("Up", "echo up > $HOME/.xakar.sock", "Win+Up"),
@@ -43,7 +53,7 @@ def generate_block() -> str:
     lines.append("Comment=")
     lines.append(f"DataCount={len(ACTIONS)}")
     lines.append("Enabled=true")
-    lines.append("Name=Setuzuna Xakar Bindings")
+    lines.append(f"Name={TARGET_NAME}")
     lines.append("SystemGroup=0")
     lines.append("Type=ACTION_DATA_GROUP\n")
 
@@ -115,8 +125,102 @@ Terminal=false
         f.write(desktop_entry)
     print(f"[xakar] Autostart entry created at {XCAPE_PATH}")
 
+def install_empty_config():
+    os.makedirs(os.path.dirname(EMPTY_PATH), exist_ok=True)
+    empty_content = """[Data]
+DataCount=1
+
+[Main]
+ImportId=setuzuna_empty
+Version=2
+"""
+    with open(EMPTY_PATH, "w") as f:
+        f.write(empty_content)
+    print(f"[xakar] KHotKeys empty config written to {EMPTY_PATH}")
+
+def uninstall_shortcuts():
+    parser = configparser.RawConfigParser(strict=False)
+    parser.optionxform = str
+    if os.path.exists(KHOTKEYS_PATH):
+        try:
+            with open(KHOTKEYS_PATH, "r", encoding="utf-8") as f:
+                parser.read_file(f)
+        except Exception:
+            parser.read(KHOTKEYS_PATH, encoding="utf-8")
+    all_sections = parser.sections()
+    prefixes = set()
+    for sec in parser.sections():
+        try:
+            if parser.has_option(sec, "Name"):
+                val = parser.get(sec, "Name")
+                if val == TARGET_NAME:
+                    prefixes.add(sec)
+        except Exception:
+            continue
+
+    if not prefixes:
+        print("[xakar] No sections with Name={} found. Nothing to do.".format(repr(TARGET_NAME)))
+        return 0
+
+    to_remove = set()
+    for prefix in prefixes:
+        pat = re.compile(r"^" + re.escape(prefix) + r"($|[^0-9])")
+        for sec in all_sections:
+            if pat.match(sec):
+                to_remove.add(sec)
+
+    to_remove = sorted(to_remove)
+    
+    if not to_remove:
+        print("[xakar] Found prefixes:", prefixes)
+        print("[xakar] But no matching sections to remove (after applying digit-boundary rule).")
+        return 0
+
+    print("[xakar] Found prefixes (sections with Name={}):".format(repr(TARGET_NAME)))
+    for p in sorted(prefixes):
+        print("[xakar]  -", p)
+
+    dirname = os.path.dirname(KHOTKEYS_PATH) or "."
+    base = os.path.basename(KHOTKEYS_PATH)
+    ts = datetime.now().strftime("%Y%m%dT%H%M%S")
+    bak = os.path.join(dirname, f"{base}.bak.{ts}")
+    shutil.copy2(KHOTKEYS_PATH, bak)
+
+    if bak:
+        print("[xakar] Backup created:", bak)
+    else:
+        print("[xakar] No backup created (file did not exist? unexpected).")
+
+    for s in to_remove:
+        try:
+            parser.remove_section(s)
+        except Exception as e:
+            print(f"[xakar] Warning: failed to remove section {s}: {e}", file=sys.stderr)
+
+    dirn = os.path.dirname(KHOTKEYS_PATH) or "."
+    with NamedTemporaryFile("w", encoding="utf-8", delete=False, dir=dirn) as tf:
+        parser.write(tf)
+        tmpname = tf.name
+    os.replace(tmpname, KHOTKEYS_PATH)
+    print("[xakar] Wrote modified file:", KHOTKEYS_PATH)
+    print("[xakar] Removed {} sections.".format(len(to_remove)))
+    return 0
+
+def main():
+    parser = argparse.ArgumentParser(description="Manage installation/uninstallation of shortcuts and autostart configs.")
+    group = parser.add_mutually_exclusive_group(required=True)
+    group.add_argument("--install", action="store_true", help="Install shortcuts and autostart configs")
+    group.add_argument("--uninstall", action="store_true", help="Uninstall shortcuts and restore empty config")
+
+    args = parser.parse_args()
+
+    if args.install:
+        install_shortcuts()
+        install_autostart()
+        install_xcape_autostart()
+    elif args.uninstall:
+        install_empty_config()
+        uninstall_shortcuts()
 
 if __name__ == "__main__":
-    install_shortcuts()
-    install_autostart()
-    install_xcape_autostart()
+    main()
