@@ -15,27 +15,27 @@ KHOTKEYS_PATH = os.path.expanduser("~/.trinity/share/config/khotkeysrc")
 TARGET_NAME = "Setuzuna Xakar Bindings"
 
 ACTIONS = [
-    ("Up", "echo up > $HOME/.xakar.sock", "Win+Up"),
-    ("Down", "echo down > $HOME/.xakar.sock", "Win+Down"),
-    ("Left", "echo left > $HOME/.xakar.sock", "Win+Left"),
-    ("Right", "echo right > $HOME/.xakar.sock", "Win+Right"),
-    ("Center", "echo center > $HOME/.xakar.sock", "Win+Return"),
-    ("Fullscreen", "echo fullscreen > $HOME/.xakar.sock", "Win+Space"),
-    ("WM_Fullscreen", "echo wm_fullscreen > $HOME/.xakar.sock", "Win+Shift+Space"),
-    ("PreserveGeomUp", "echo preserve_geom up > $HOME/.xakar.sock", "Win+Alt+Up"),
-    ("PreserveGeomDown", "echo preserve_geom down > $HOME/.xakar.sock", "Win+Alt+Down"),
-    ("PreserveGeomLeft", "echo preserve_geom left > $HOME/.xakar.sock", "Win+Alt+Left"),
-    ("PreserveGeomRight", "echo preserve_geom right > $HOME/.xakar.sock", "Win+Alt+Right"),
-    ("PreserveGeomCenter", "echo preserve_geom center > $HOME/.xakar.sock", "Win+Alt+Return"),
-    ("PreserveGeomFullscreen", "echo preserve_geom fullscreen > $HOME/.xakar.sock", "Win+Alt+Space"),
-    ("PreserveGeomWM_Fullscreen", "echo preserve_geom wm_fullscreen > $HOME/.xakar.sock", "Win+Alt+Shift+Space"),
-    ("PreserveSizeUp", "echo preserve_size up > $HOME/.xakar.sock", "Win+Ctrl+Up"),
-    ("PreserveSizeDown", "echo preserve_size down > $HOME/.xakar.sock", "Win+Ctrl+Down"),
-    ("PreserveSizeLeft", "echo preserve_size left > $HOME/.xakar.sock", "Win+Ctrl+Left"),
-    ("PreserveSizeRight", "echo preserve_size right > $HOME/.xakar.sock", "Win+Ctrl+Right"),
-    ("PreserveSizeCenter", "echo preserve_size center > $HOME/.xakar.sock", "Win+Ctrl+Return"),
-    ("PreserveSizeFullscreen", "echo preserve_size fullscreen > $HOME/.xakar.sock", "Win+Ctrl+Space"),
-    ("PreserveSizeWM_Fullscreen", "echo preserve_size wm_fullscreen > $HOME/.xakar.sock", "Win+Ctrl+Shift+Space"),
+    ("Up", "echo tile up > $HOME/.setuzuna/xakar/internal.sock", "Win+Up"),
+    ("Down", "echo tile down > $HOME/.setuzuna/xakar/internal.sock", "Win+Down"),
+    ("Left", "echo tile left > $HOME/.setuzuna/xakar/internal.sock", "Win+Left"),
+    ("Right", "echo tile right > $HOME/.setuzuna/xakar/internal.sock", "Win+Right"),
+    ("Center", "echo tile center > $HOME/.setuzuna/xakar/internal.sock", "Win+Return"),
+    ("Fullscreen", "echo tile fullscreen > $HOME/.setuzuna/xakar/internal.sock", "Win+Space"),
+    ("WM_Fullscreen", "echo tile wm_fullscreen > $HOME/.setuzuna/xakar/internal.sock", "Win+Shift+Space"),
+    ("PreserveGeomUp", "echo tile up preserve_geom > $HOME/.setuzuna/xakar/internal.sock", "Win+Alt+Up"),
+    ("PreserveGeomDown", "echo tile down preserve_geom > $HOME/.setuzuna/xakar/internal.sock", "Win+Alt+Down"),
+    ("PreserveGeomLeft", "echo tile left preserve_geom > $HOME/.setuzuna/xakar/internal.sock", "Win+Alt+Left"),
+    ("PreserveGeomRight", "echo tile right preserve_geom > $HOME/.setuzuna/xakar/internal.sock", "Win+Alt+Right"),
+    ("PreserveGeomCenter", "echo tile center preserve_geom > $HOME/.setuzuna/xakar/internal.sock", "Win+Alt+Return"),
+    ("PreserveGeomFullscreen", "echo tile fullscreen preserve_geom > $HOME/.setuzuna/xakar/internal.sock", "Win+Alt+Space"),
+    ("PreserveGeomWM_Fullscreen", "echo tile wm_fullscreen preserve_geom > $HOME/.setuzuna/xakar/internal.sock", "Win+Alt+Shift+Space"),
+    ("PreserveSizeUp", "echo tile up preserve_mode > $HOME/.setuzuna/xakar/internal.sock", "Win+Ctrl+Up"),
+    ("PreserveSizeDown", "echo tile down preserve_mode > $HOME/.setuzuna/xakar/internal.sock", "Win+Ctrl+Down"),
+    ("PreserveSizeLeft", "echo tile left preserve_mode > $HOME/.setuzuna/xakar/internal.sock", "Win+Ctrl+Left"),
+    ("PreserveSizeRight", "echo tile right preserve_mode > $HOME/.setuzuna/xakar/internal.sock", "Win+Ctrl+Right"),
+    ("PreserveSizeCenter", "echo tile center preserve_mode > $HOME/.setuzuna/xakar/internal.sock", "Win+Ctrl+Return"),
+    ("PreserveSizeFullscreen", "echo tile fullscreen preserve_mode > $HOME/.setuzuna/xakar/internal.sock", "Win+Ctrl+Space"),
+    ("PreserveSizeWM_Fullscreen", "echo tile wm_fullscreen preserve_mode > $HOME/.setuzuna/xakar/internal.sock", "Win+Ctrl+Shift+Space"),
 ]
 
 def generate_block() -> str:
@@ -139,7 +139,7 @@ Version=2
     print(f"[xakar] KHotKeys empty config written to {EMPTY_PATH}")
 
 def uninstall_shortcuts():
-    parser = configparser.RawConfigParser(strict=False)
+    parser = configparser.RawConfigParser(strict=False, allow_no_value = True)
     parser.optionxform = str
     if os.path.exists(KHOTKEYS_PATH):
         try:
@@ -215,9 +215,9 @@ def main():
     args = parser.parse_args()
 
     if args.install:
-        install_shortcuts()
+        #install_shortcuts()
         install_autostart()
-        install_xcape_autostart()
+        #install_xcape_autostart()
     elif args.uninstall:
         install_empty_config()
         uninstall_shortcuts()
