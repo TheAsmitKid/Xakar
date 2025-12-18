@@ -1,6 +1,6 @@
 # Xakar v5-rc1 — Native C++ X11 Tiling Daemon
 
-> First release candidate for fifth-generation tiling daemon — rewritten in optimized C++17 with direct Xlib/Xinerama calls.  
+> First release candidate for fifth-generation tiling daemon — rewritten in optimized C with direct Xlib/Xinerama calls.  
 > No Python, no external tools, no flicker. Fast, minimal, multi-monitor aware.
 > No need for Xcape and added even more features, also needs installing .config at $HOME/.setuzuna/xakar/.config
 ---
